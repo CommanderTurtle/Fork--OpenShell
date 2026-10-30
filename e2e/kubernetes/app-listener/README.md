@@ -56,6 +56,7 @@ Run from the repository root, supplying the public application certificate/CA:
 KUBECONFIG="$PWD/kubeconfig" uv run --no-project python \
   e2e/kubernetes/app-listener/verify.py \
   --namespace listener-review-shared \
+  --topology shared \
   --gateway-endpoint https://localhost:29203 \
   --forward-gateway service/listener-review \
   --app-ca /path/to/app-ca.crt \
@@ -73,8 +74,9 @@ The runner creates and cleans up its sandboxes, client Pods, public-CA ConfigMap
 and ingress policies. It checks named/unnamed HTTP routes, public Host/Origin and
 cookies, credential stripping and explicit bearer passthrough, unknown routes,
 Host/SNI mismatch, quiet WebSockets beyond 30 seconds, selective withdrawal, and
-re-exposure without restarting the application. When dedicated app Services are
-configured, it also verifies their DNS and EndpointSlices.
+re-exposure without restarting the application. Use `--topology dedicated` with
+`create_service = true` to require one app Service and verify its DNS and
+EndpointSlices. Shared topology requires no app Services.
 
 `--network-policy` requires an enforcing cluster network implementation, such as
 the local k3s default. A default kind cluster needs a policy-enforcing CNI before

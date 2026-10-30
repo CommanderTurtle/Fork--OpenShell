@@ -22,9 +22,17 @@ from urllib.parse import urlsplit
 HERE = Path(__file__).resolve().parent
 
 
+def check_app_service_count(services, topology):
+    expected = 1 if topology == "dedicated" else 0
+    assert len(services) == expected, (
+        f"{topology} topology expected {expected} app Services, found {len(services)}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--namespace", required=True)
+    parser.add_argument("--topology", choices=("shared", "dedicated"), required=True)
     parser.add_argument("--gateway-endpoint", required=True)
     parser.add_argument(
         "--forward-gateway",
@@ -506,7 +514,10 @@ def main():
             sandbox_id = (
                 pod["metadata"].get("labels", {}).get("openshell.ai/sandbox-id")
             )
-            if sandbox_id:
+            if args.topology == "dedicated":
+                assert sandbox_id, (
+                    "dedicated supervisor is missing its sandbox identity"
+                )
                 services = json.loads(
                     run(
                         [
@@ -520,6 +531,7 @@ def main():
                         ]
                     ).stdout
                 )["items"]
+                check_app_service_count(services, args.topology)
                 for service in services:
                     service_name = service["metadata"]["name"]
                     deadline = time.monotonic() + 60
@@ -565,6 +577,21 @@ def main():
                         "PASS dedicated Service DNS and EndpointSlice select the supervisor",
                         flush=True,
                     )
+            else:
+                services = json.loads(
+                    run(
+                        [
+                            *k,
+                            "get",
+                            "services",
+                            "-l",
+                            "openshell.ai/component=app-service",
+                            "-o",
+                            "json",
+                        ]
+                    ).stdout
+                )["items"]
+                check_app_service_count(services, args.topology)
             assert json.loads(probe("http", ip, hostname(name, "")).stdout)[0] == 200
             print("PASS unnamed HTTP route", flush=True)
             print(probe("headers", ip, host).stdout, end="", flush=True)
