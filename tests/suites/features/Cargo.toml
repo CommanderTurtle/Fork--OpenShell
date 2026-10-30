@@ -3,4 +3,4 @@
 
 [workspace]
 resolver = "2"
-members = ["keycloak", "oci-image", "provider-refresh/keycloak"]
+members = ["keycloak-provider-refresh", "oci-image", "provider-refresh/keycloak"]
